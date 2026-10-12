@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  poem: false
+  # Conserve the free review quota: first push only (comment `@coderabbitai review`
+  # for later pushes), and skip PRs labelled `skip-review`.
+  auto_review:
+    auto_incremental_review: false
+    labels:
+      - "!skip-review"
+  # Shell/markdown repo: the docstring check and generator only add noise.
+  finishing_touches:
+    docstrings:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+  path_instructions:
+    - path: "skills/**/SKILL.md"
+      instructions: |
+        Claude Code skill. Frontmatter needs `name` (matching the directory) and `description`;
+        use `user-invocable` (not `user-invokable`). Skills are public and generic: flag
+        project-specific paths, hostnames, secrets, or employer details.
+    - path: "**/*.sh"
+      instructions: |
+        Must use `#!/usr/bin/env bash` and `set -euo pipefail`. Flag unquoted expansions and
+        commands that can fail silently.
+    - path: ".github/**"
+      instructions: |
+        Pin third-party actions to a full commit SHA; keep `permissions` least-privilege.
