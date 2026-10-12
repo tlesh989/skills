@@ -2,7 +2,7 @@
 name: ship
 description: Use when ready to commit, push, and open a pull request in any git repo — validates, commits, pushes, and opens the PR
 user-invocable: true
-allowed-tools: Bash, Read, Edit, Glob
+allowed-tools: Bash, Read, Edit, Glob, Skill
 arguments:
   - name: message
     description: "Optional commit message override"

@@ -40,7 +40,7 @@ gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){
 ```
 
 Keep the `thread node ID → comment databaseId → file:line` mapping so each skipped finding can be
-resolved on its thread in Step 6.
+resolved on its thread in Step 5.
 
 ## Step 1b — When review is churning, get one full independent review
 
@@ -167,7 +167,7 @@ EOF
 )"
 ```
 
-If the repo's `.coderabbit.yml` sets `reviews.auto_incremental_review: false`, a push triggers no
+If the repo's `.coderabbit.yaml` sets `reviews.auto_incremental_review: false`, a push triggers no
 review: post one `@coderabbitai review` comment per batch (not per commit) and say you did.
 
 **Do not poll for the next review** — it lands minutes later and sleep loops burn wall-clock and
