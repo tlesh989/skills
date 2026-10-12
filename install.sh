@@ -24,6 +24,7 @@ for cfg in "${targets[@]}"; do
     name="$(basename "${src}")"
     dest="${cfg}/skills/${name}"
     if [[ -L "${dest}" ]]; then
+      [[ "$(readlink "${dest}")" == "${src%/}" ]] && continue # already linked: stay silent so callers can detect changes
       ln -sfn "${src%/}" "${dest}"
     elif [[ -e "${dest}" ]]; then
       if (( ! force )); then
