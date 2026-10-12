@@ -10,8 +10,8 @@ for dir in skills/*/; do
   name="$(basename "$dir")"
   f="${dir}SKILL.md"
   [[ -f "$f" ]] || { err "$dir has no SKILL.md"; continue; }
-  fm="$(awk 'NR==1 && $0!="---"{exit} NR>1 && $0=="---"{exit} NR>1{print}' "$f")"
-  [[ -n "$fm" ]] || { err "$f: missing frontmatter"; continue; }
+  fm="$(awk 'NR==1{if($0!="---")exit 1;next} $0=="---"{c=1;exit} {print} END{exit !c}' "$f")" \
+    || { err "$f: missing or unterminated frontmatter"; continue; }
   grep -qx "name: $name" <<<"$fm" || err "$f: 'name:' must be '$name'"
   grep -q '^description:' <<<"$fm" || err "$f: missing description"
   ! grep -q '^user-invokable:' <<<"$fm" || err "$f: use 'user-invocable', not 'user-invokable'"
