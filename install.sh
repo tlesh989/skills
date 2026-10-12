@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Symlink every skill in this repo into a Claude config dir's skills/ folder.
 # Usage: ./install.sh [-f] [config_dir ...]   (default: $CLAUDE_CONFIG_DIR or ~/.claude)
-#   -f  replace existing real directories (moved to <name>.bak)
+#   -f  replace existing real directories (moved to <config_dir>/skills-backup/<name>,
+#       outside skills/ so Claude doesn't load the old copy as a duplicate skill)
 set -euo pipefail
 
 force=0
@@ -29,11 +30,13 @@ for cfg in "${targets[@]}"; do
         echo "skip ${dest} (exists; rerun with -f to replace)" >&2
         continue
       fi
-      if [[ -e "${dest}.bak" ]]; then
-        echo "skip ${dest} (${dest}.bak already exists; remove it first)" >&2
+      backup="${cfg}/skills-backup/${name}"
+      if [[ -e "${backup}" ]]; then
+        echo "skip ${dest} (${backup} already exists; remove it first)" >&2
         continue
       fi
-      mv -- "${dest}" "${dest}.bak"
+      mkdir -p -- "${cfg}/skills-backup"
+      mv -- "${dest}" "${backup}"
       ln -s "${src%/}" "${dest}"
     else
       ln -s "${src%/}" "${dest}"

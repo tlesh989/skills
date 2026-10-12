@@ -11,6 +11,6 @@ git clone https://github.com/tlesh989/skills ~/repos/tlesh989/skills
 ```
 
 Skills are symlinked, so `git pull` updates every profile. Existing real directories are skipped;
-`-f` moves them to `<name>.bak` and links the repo version.
+`-f` moves them to `<config_dir>/skills-backup/<name>` and links the repo version.
 
 Repo-specific rules (protected files, extra checks) belong in each project's CLAUDE.md, not here.
