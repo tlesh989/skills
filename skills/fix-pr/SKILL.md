@@ -64,6 +64,17 @@ findings like any reviewer's.
 Fold valid Critical/Major findings into the same push. Fix a Minor when it is a real defect;
 otherwise ticket it rather than start another round.
 
+**Folded-in fixes are new code, so review them too before pushing.** After each review pass,
+stage what it saw (`git add <files>`, including any new files); plain `git diff` then shows
+only the edits made since, and that is the next pass's scope. Repeat while a pass finds a Critical/Major. When a pass finds only
+Minors, fix the real defects, ticket the rest, and stop. Those last edits get no review pass,
+only the Step 3b self-gate, so keep them small. If the same code produces Critical/Majors twice,
+use the contract rule at the end of this step instead of another pass.
+
+These follow-up passes belong to the round they fix. They do not count as a new round for the
+round-3 trigger or the stop rule, and a round re-requests the hosted bot at most once, after its
+final push.
+
 **Re-request the hosted bot only when** a fix round changed logic substantially (a new branch, a
 reordered sequence, a rewritten algorithm), or a local review found a Critical/Major. Otherwise do
 not: the local fix-diff review already covered the round. Say which way you decided and why.
