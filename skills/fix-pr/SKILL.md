@@ -79,6 +79,15 @@ final push.
 reordered sequence, a rewritten algorithm), or a local review found a Critical/Major. Otherwise do
 not: the local fix-diff review already covered the round. Say which way you decided and why.
 
+When that trigger fires, **try the CodeRabbit CLI first** (see `coderabbit-cli.md`, including
+when to skip it), and post `@coderabbitai full review` only if the CLI is unavailable, out of reviews, or
+failed. The CLI stands in for that one re-request per round, nothing more. It does not replace the
+opening hosted review, it does not satisfy a required `CodeRabbit` status check, and the cheap
+subagent passes still carry the fold-in follow-ups.
+
+How to run the CLI review, and when to skip it: **read `coderabbit-cli.md`, next to this
+`SKILL.md` in the skill's base directory**, before the first CLI call. It covers the checks, flags, scope, output, and the untrusted-text rule.
+
 **Stop requesting reviews when both hold:**
 
 1. The last round's findings were all Minor **and** all inside code written during fix rounds,
@@ -202,7 +211,9 @@ EOF
 ```
 
 When Step 1b says to re-request the hosted bot, put the request in this summary comment. One per
-batch, never per commit. Say in the report whether you requested one and why.
+batch, never per commit. Say in the report whether you requested one and why. If a CodeRabbit CLI
+review stood in for it, list that review's findings and their outcomes under a `**CodeRabbit CLI
+(--deep)**` heading, since they never appear on the PR.
 
 ⚠️ **CodeRabbit with `reviews.auto_review.auto_incremental_review: false`:** a push gets no review,
 yet CodeRabbit still sets its status check to **success**, so a green `CodeRabbit` check does not
