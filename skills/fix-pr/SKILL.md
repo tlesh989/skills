@@ -194,10 +194,10 @@ When Step 1b says to re-request the hosted bot, put the request in this summary 
 batch, never per commit. Say in the report whether you requested one and why.
 
 ⚠️ **CodeRabbit with `reviews.auto_review.auto_incremental_review: false`:** a push gets no review,
-yet CodeRabbit marks the pushed commit as handled and sets its status check to **success**. A green
-`CodeRabbit` check therefore does not mean the commit was reviewed. Because the commit counts as
-handled, `@coderabbitai review` then fails with "does not re-review already reviewed commits". Use
-`@coderabbitai full review`, which works in this mode and costs one review from the allowance.
+yet CodeRabbit still sets its status check to **success**, so a green `CodeRabbit` check does not
+mean the commit was reviewed. `@coderabbitai review` then fails with "does not re-review already
+reviewed commits" (the skipped push appears to count as handled). Use `@coderabbitai full review`,
+which runs in this mode and costs one review from the allowance.
 `@coderabbitai rate limit` shows the remaining allowance without spending any.
 
 **Do not poll for the next review** — it lands minutes later and sleep loops burn wall-clock and
