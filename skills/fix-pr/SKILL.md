@@ -1,6 +1,6 @@
 ---
 name: fix-pr
-description: Use when a PR has review comments to address — fetches CodeRabbit/human reviewer feedback for a PR, fixes valid issues, resolves skipped threads with reasons, and pushes
+description: Use when a PR has review comments to address — fetches CodeRabbit/human reviewer feedback for a PR, fixes valid issues, resolves skipped threads with reasons, and pushes. Runs local different-model reviews to spare the hosted reviewer's rate-limited allowance
 user-invocable: true
 allowed-tools: Bash, Read, Edit, Glob, Grep, Agent
 arguments:
@@ -42,19 +42,42 @@ gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){
 Keep the `thread node ID → comment databaseId → file:line` mapping so each skipped finding can be
 resolved on its thread in Step 5.
 
-## Step 1b — When review is churning, get one full independent review
+## Step 1b — Spend hosted review on purpose; review locally by default
 
-Bots like CodeRabbit review incrementally: each pass goes deep on the last push and never steps
-back to the whole design. Count prior fix rounds
-(`git log --oneline <base>..HEAD | grep -c 'address .*review'`) and note which sections they
-touched. Run a full independent review now if **this is round 3 or later**, or **the section a
-finding names was already flagged in an earlier round**.
+Hosted review bots (CodeRabbit and the like) are **rate-limited**: a plan grants a few reviews per
+hour, and a re-review of a large PR spends one. A local review by a subagent on a different model
+costs nothing against that budget and, unlike an incremental bot pass, can be pointed at the whole
+PR. So the bot gets the review it runs when the PR opens, and local reviews carry the fix rounds.
 
-How: spawn one read-only `general-purpose` Agent with a `model` different from this session's. No
-edits, commits, or GitHub posts. Ask for one ranked pass over the whole PR, most severe first;
-each finding gets lines, severity, a failure scenario, a fix, and VERIFIED or BELIEVED; end with a
-merge verdict. Fold valid Critical/Major findings into the same push; ticket the rest rather than
-starting another round. Verify its findings like any reviewer's.
+**How to run a local review:** spawn one read-only `general-purpose` Agent with a `model` different
+from this session's. No edits, commits, or GitHub posts. Give it the scope (below) and ask for one
+ranked pass, most severe first. Each finding needs lines, severity (Critical/Major/Minor), a failure
+scenario, a fix, and VERIFIED (reproduced) or BELIEVED. End with a merge verdict. Verify its
+findings like any reviewer's.
+
+| When | Scope of the local review |
+|---|---|
+| No full review of this PR exists yet (bot or local) | The whole PR: `git diff <base>...HEAD` |
+| Round 3 or later (`git log --oneline <base>..HEAD \| grep -c 'address .*review'`), or a section flagged again | The whole PR |
+| Every other fix round, before pushing | This round's fix diff: `git diff @{upstream}` |
+
+Fold valid Critical/Major findings into the same push. Fix a Minor when it is a real defect;
+otherwise ticket it rather than start another round.
+
+**Re-request the hosted bot only when** a fix round changed logic substantially (a new branch, a
+reordered sequence, a rewritten algorithm), or a local review found a Critical/Major. Otherwise do
+not: the local fix-diff review already covered the round. Say which way you decided and why.
+
+**Stop requesting reviews when both hold:**
+
+1. The last round's findings were all Minor **and** all inside code written during fix rounds,
+   not the original design.
+2. Every commit has had at least one full review, bot or local. A one-line fix a local fix-diff
+   review covered counts.
+
+Severity alone is not the signal. A Minor finding can still be a real bug, so fix it. What matters
+is whether another round would look at anything new. Equally, never stop because a round count was
+reached: a fix round is new code and can be wrong in new ways.
 
 If one section keeps getting flagged, stop patching it: replace an algorithm described in prose
 with a contract (invariants and test cases), and prefer the rule that closes the whole class.
@@ -167,8 +190,15 @@ EOF
 )"
 ```
 
-If the repo's `.coderabbit.yaml` sets `reviews.auto_incremental_review: false`, a push triggers no
-review: post one `@coderabbitai review` comment per batch (not per commit) and say you did.
+When Step 1b says to re-request the hosted bot, put the request in this summary comment. One per
+batch, never per commit. Say in the report whether you requested one and why.
+
+⚠️ **CodeRabbit with `reviews.auto_review.auto_incremental_review: false`:** a push gets no review,
+yet CodeRabbit marks the pushed commit as handled and sets its status check to **success**. A green
+`CodeRabbit` check therefore does not mean the commit was reviewed. Because the commit counts as
+handled, `@coderabbitai review` then fails with "does not re-review already reviewed commits". Use
+`@coderabbitai full review`, which works in this mode and costs one review from the allowance.
+`@coderabbitai rate limit` shows the remaining allowance without spending any.
 
 **Do not poll for the next review** — it lands minutes later and sleep loops burn wall-clock and
 misjudge the window. Report what you actually saw, timestamped: findings fixed, threads resolved,
