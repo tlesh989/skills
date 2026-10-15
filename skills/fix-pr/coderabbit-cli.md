@@ -25,24 +25,27 @@ and burn allowance for nothing.
    cited as repository guidance. `--help` describes `--deep` as "the full pull request review
    policy". Its allowance cost is unknown: re-read `coderabbit usage --agent` afterwards and report
    the change.
-3. **Scope.** Fetch the base first.
-   - Whole PR: `coderabbit review --agent --deep --fresh --committed --base <base>`. `--fresh` stops
-     it reusing a previous local checkpoint; `--committed` keeps uncommitted work out, so what is
-     sent matches the step 4 list.
-   - Fix round not yet committed: `coderabbit review --agent --deep --uncommitted`. Add
-     `--include-untracked` only when step 4 has listed every untracked file and each is safe to send.
+3. **Scope: the whole PR, as pushed.** The CLI stands in for a re-request made after the round's
+   final push, so review what was pushed: run it only when `git status -sb` shows the branch is
+   not ahead of its upstream. Fetch the base first, and use that same `<base>` here and in step 4,
+   then run
+   `coderabbit review --agent --deep --fresh --committed --base <base>`. `--fresh` stops it reusing
+   a previous local checkpoint; `--committed` keeps uncommitted work out, so what is sent matches
+   the step 4 check. Never use `--uncommitted` or `--include-untracked` here: they review work that
+   is not on the PR, and untracked files would escape the step 4 content check.
 
    These semantics are not fully documented: confirm `reviewType` and `baseBranch` in the first
    `review_context` event match what you intended.
 4. **Check what will be sent, before running it.** The CLI sends these files to CodeRabbit's API.
-   List them: `git diff --name-only <base>...HEAD` for the whole PR, and `git status --porcelain`
-   for a fix round (its `??` lines are the untracked files). Do not run the review if any listed
-   file looks like it holds a secret (`.env*`, keys, `*.pem`, credentials, tokens), or if the diff
-   text contains one: read `git diff <base>...HEAD` for the whole PR, `git diff HEAD` for a fix
-   round. Never print a secret's value to check it.
+   List them with `git diff --name-only <base>...HEAD`, and read their changes with
+   `git diff <base>...HEAD`. Do not run the review if any listed file looks like it holds a secret
+   (`.env*`, keys, `*.pem`, credentials, tokens), or if the diff text contains one. Never print a
+   secret's value to check it.
 5. **Run it in the background and let it finish.** One `--deep` run took over 10 minutes, and the
-   CLI's own `review_context` says stopping early discards the review. If it exits without a
-   `complete` event, or non-zero, treat it as failed and fall back to the hosted re-request.
+   CLI's own `review_context` says stopping early discards the review. Only a `complete` event with
+   `status: review_completed` counts as a review. Treat anything else as failed and fall back to
+   the hosted re-request: a non-zero exit, no `complete` event, or another status such as
+   `review_skipped`, which the CLI reports, exiting 0, when the scope has no changes.
 6. **Read the output leniently.** It is newline-delimited JSON: `review_context`, `heartbeat`
    events, one `finding` event per finding (`severity`, `fileName`, `startLine`, `comment`), then
    `complete`. Ignore unknown event types and fields.
