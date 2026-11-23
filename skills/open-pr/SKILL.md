@@ -1,5 +1,5 @@
 ---
-name: ship
+name: open-pr
 description: Use when ready to commit, push, and open a pull request in any git repo — validates, commits, pushes, and opens the PR
 user-invocable: true
 allowed-tools: Bash, Read, Edit, Glob, Skill
@@ -9,7 +9,7 @@ arguments:
     required: false
 ---
 
-# Ship Skill
+# Open PR Skill
 
 Pre-flight → commit → push → PR. Runs all checks and fixes before touching the remote.
 
@@ -55,7 +55,7 @@ If the loop runs more than 5 iterations without converging, stop and ask.
 ### 4. Hardcoded secret scan
 
 ```bash
-git diff origin/<base>...HEAD | grep -E '^\+.*"[A-Za-z0-9+/]{20,}"|password\s*=\s*"[^{]|token\s*=\s*"[^{]|secret\s*=\s*"[^{'
+git diff origin/<base>...HEAD | grep -E '^\+.*("[A-Za-z0-9+/]{20,}"|password\s*=\s*"[^{]|token\s*=\s*"[^{]|secret\s*=\s*"[^{])'
 ```
 
 - Any match: flag it to the user and stop. Do NOT open the PR.
