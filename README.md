@@ -1,6 +1,6 @@
 # skills
 
-Personal Claude Code skills: `ship`, `fix-pr`, `pre-commit-fix`, `context-audit`, `settled`.
+Personal Claude Code skills: `open-pr`, `fix-pr`, `pre-commit-fix`, `context-audit`, `settled`.
 
 ## Install
 

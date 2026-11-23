@@ -1,5 +1,5 @@
 ---
-name: ship
+name: open-pr
 description: Use when ready to commit, push, and open a pull request in any git repo — validates, commits, pushes, and opens the PR
 user-invocable: true
 allowed-tools: Bash, Read, Edit, Glob, Skill
@@ -9,7 +9,7 @@ arguments:
     required: false
 ---
 
-# Ship Skill
+# Open PR Skill
 
 Pre-flight → commit → push → PR. Runs all checks and fixes before touching the remote.
 
