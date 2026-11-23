@@ -55,7 +55,7 @@ If the loop runs more than 5 iterations without converging, stop and ask.
 ### 4. Hardcoded secret scan
 
 ```bash
-git diff origin/<base>...HEAD | grep -E '^\+.*"[A-Za-z0-9+/]{20,}"|password\s*=\s*"[^{]|token\s*=\s*"[^{]|secret\s*=\s*"[^{]'
+git diff origin/<base>...HEAD | grep -E '^\+.*("[A-Za-z0-9+/]{20,}"|password\s*=\s*"[^{]|token\s*=\s*"[^{]|secret\s*=\s*"[^{])'
 ```
 
 - Any match: flag it to the user and stop. Do NOT open the PR.
