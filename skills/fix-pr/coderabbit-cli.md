@@ -12,14 +12,16 @@ limit. That is one observation, and the docs imply a shared pool, so read `coder
 the docs.
 
 **Skip it entirely** unless the repository uses CodeRabbit: a `.coderabbit.yaml`/`.yml`, or the
-hosted bot has reviewed this PR. A global login would otherwise review it with default settings
-and burn allowance for nothing.
+hosted bot has reviewed or rate-limited this PR. A global login would otherwise review it with
+default settings and burn allowance for nothing.
 
 ## Steps
 
 1. **Check first, all read-only.** `command -v coderabbit` succeeds; `coderabbit auth status --agent`
    exits 0 and reports `authenticated: true`; `coderabbit usage --agent` reports
-   `includedReviews.remaining` above 0. If any check fails, fall back to the hosted re-request.
+   `includedReviews.remaining` above 0. If any check fails, fall back to the hosted re-request,
+   or, when Step 1a found the PR rate-limited, to the different-model subagent. Wherever this file
+   says "fall back to the hosted re-request", the same exception applies.
 2. **Pass `--deep`.** In one probe, a planted change with two violations of repository-specific
    naming rules got 0 findings from the default review and 5 from `--deep`, including both rules,
    cited as repository guidance. `--help` describes `--deep` as "the full pull request review

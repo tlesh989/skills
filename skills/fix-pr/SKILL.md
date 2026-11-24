@@ -1,6 +1,6 @@
 ---
 name: fix-pr
-description: Use when a PR has review comments to address — fetches CodeRabbit/human reviewer feedback for a PR, fixes valid issues, resolves skipped threads with reasons, and pushes. Runs local different-model reviews to spare the hosted reviewer's rate-limited allowance
+description: Use when a PR has review comments to address — fetches CodeRabbit/human reviewer feedback for a PR, fixes valid issues, resolves skipped threads with reasons, and pushes. Runs local different-model reviews to spare the hosted reviewer's rate-limited allowance, and in its place when CodeRabbit skipped the PR for its rate limit
 user-invocable: true
 allowed-tools: Bash, Read, Edit, Glob, Grep, Agent
 arguments:
@@ -41,6 +41,41 @@ gh api graphql -f query='query($owner:String!,$repo:String!,$pr:Int!){
 
 Keep the `thread node ID → comment databaseId → file:line` mapping so each skipped finding can be
 resolved on its thread in Step 5.
+
+## Step 1a — Hosted review rate-limited? Review locally instead
+
+CodeRabbit marks a PR it skipped for its rate limit with a comment containing
+`rate limited by coderabbit.ai`. Its `CodeRabbit` check then reads NEUTRAL, which is not a review.
+
+```bash
+gh api repos/{owner}/{repo}/issues/<PR>/comments --paginate \
+  --jq '.[] | select(.user.login=="coderabbitai[bot]") | select(.body | contains("rate limited by coderabbit.ai"))
+    | .updated_at + "  " + ((.body | capture("Next included review available in (?<w>[^.\r\n]*)").w) // "wait unknown")' \
+  | tail -n 1
+```
+
+Any output means the marker is present; the line is the latest rate-limit comment.
+
+The PR is **rate-limited** when that marker is present **and** no `coderabbitai[bot]` review in the
+Step 1 reviews has `commit_id` equal to the head SHA (`gh pr view <PR> --json headRefOid`). A review
+of the head means the limit cleared, so skip this step.
+
+When rate-limited:
+
+1. Say when the next included review is due, so the user can choose to wait. The command prints
+   the comment's `updated_at` and the wait; the wait counts from that time, not from now, so add
+   the two and say if it has passed.
+2. Confirm `git rev-parse HEAD` equals `headRefOid`. If not and the tree is clean, run
+   `gh pr checkout <PR>` (say it switches branches) and compare again. If they still differ, or
+   the tree is dirty, stop and tell the user: a review of another commit does not cover the PR.
+3. Run a **full review of the whole PR** (`git diff <base>...HEAD`). This is Step 1b's "no full
+   review exists yet" case. Try the CodeRabbit CLI first (`coderabbit-cli.md`), because its pool was
+   observed to be separate from the PR limit. If a CLI check or the run fails, fall back to the
+   different-model subagent, **not** the hosted re-request: the hosted bot is the thing that is out.
+4. Its findings join any human comments as the Step 2 input. Zero findings is a result, not a stop:
+   carry on to Step 6.
+5. In this mode, never post `@coderabbitai full review` or `@coderabbitai approve`, and never pass
+   `--use-credits`. Step 6 ends at an approval decision for the user.
 
 ## Step 1b — Spend hosted review on purpose; review locally by default
 
@@ -214,6 +249,16 @@ When Step 1b says to re-request the hosted bot, put the request in this summary 
 batch, never per commit. Say in the report whether you requested one and why. If a CodeRabbit CLI
 review stood in for it, list that review's findings and their outcomes under a `**CodeRabbit CLI
 (--deep)**` heading, since they never appear on the PR.
+
+**After a rate-limited round (Step 1a), stop at approval.** The PR has no CodeRabbit approval, and a
+review this session ran must not stand in for one. List the local review's findings and outcomes in
+the summary, under `**Local review (<model>)**` or `**CodeRabbit CLI (--deep)**`, and add one line
+saying CodeRabbit was rate-limited and when its next review is available. Then report the local
+verdict and offer the user three choices, without acting on any of them:
+
+- approve it themselves (posting `@coderabbitai approve` as its own comment is their call);
+- wait for the next included review, then post `@coderabbitai full review`;
+- ask a teammate to review.
 
 ⚠️ **CodeRabbit with `reviews.auto_review.auto_incremental_review: false`:** a push gets no review,
 yet CodeRabbit still sets its status check to **success**, so a green `CodeRabbit` check does not
