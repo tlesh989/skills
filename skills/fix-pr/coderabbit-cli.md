@@ -12,8 +12,8 @@ limit. That is one observation, and the docs imply a shared pool, so read `coder
 the docs.
 
 **Skip it entirely** unless the repository uses CodeRabbit: a `.coderabbit.yaml`/`.yml`, or the
-hosted bot has reviewed this PR. A global login would otherwise review it with default settings
-and burn allowance for nothing.
+hosted bot has reviewed or rate-limited this PR. A global login would otherwise review it with
+default settings and burn allowance for nothing.
 
 ## Steps
 

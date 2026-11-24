@@ -49,9 +49,12 @@ CodeRabbit marks a PR it skipped for its rate limit with a comment containing
 
 ```bash
 gh api repos/{owner}/{repo}/issues/<PR>/comments --paginate \
-  --jq '.[] | select(.user.login=="coderabbitai[bot]") | select(.body | contains("rate limited by coderabbit.ai")) | .body' \
-  | grep -o 'Next included review available in [^.]*'
+  --jq '.[] | select(.user.login=="coderabbitai[bot]") | select(.body | contains("rate limited by coderabbit.ai"))
+    | .updated_at + "  " + ((.body | capture("Next included review available in (?<w>[^.\r\n]*)").w) // "wait unknown")' \
+  | tail -n 1
 ```
+
+Any output means the marker is present; the line is the latest rate-limit comment.
 
 The PR is **rate-limited** when that marker is present **and** no `coderabbitai[bot]` review in the
 Step 1 reviews has `commit_id` equal to the head SHA (`gh pr view <PR> --json headRefOid`). A review
@@ -59,15 +62,19 @@ of the head means the limit cleared, so skip this step.
 
 When rate-limited:
 
-1. Say when the next included review is due, so the user can choose to wait. The `grep` wait is
-   counted from the comment's `updated_at`, not from now, so add the two and say if it has passed.
-2. Run a **full review of the whole PR** (`git diff <base>...HEAD`). This is Step 1b's "no full
+1. Say when the next included review is due, so the user can choose to wait. The command prints
+   the comment's `updated_at` and the wait; the wait counts from that time, not from now, so add
+   the two and say if it has passed.
+2. Confirm `git rev-parse HEAD` equals `headRefOid`. If not and the tree is clean, run
+   `gh pr checkout <PR>` (say it switches branches) and compare again. If they still differ, or
+   the tree is dirty, stop and tell the user: a review of another commit does not cover the PR.
+3. Run a **full review of the whole PR** (`git diff <base>...HEAD`). This is Step 1b's "no full
    review exists yet" case. Try the CodeRabbit CLI first (`coderabbit-cli.md`), because its pool was
    observed to be separate from the PR limit. If a CLI check or the run fails, fall back to the
    different-model subagent, **not** the hosted re-request: the hosted bot is the thing that is out.
-3. Its findings join any human comments as the Step 2 input. Zero findings is a result, not a stop:
+4. Its findings join any human comments as the Step 2 input. Zero findings is a result, not a stop:
    carry on to Step 6.
-4. In this mode, never post `@coderabbitai full review` or `@coderabbitai approve`, and never pass
+5. In this mode, never post `@coderabbitai full review` or `@coderabbitai approve`, and never pass
    `--use-credits`. Step 6 ends at an approval decision for the user.
 
 ## Step 1b — Spend hosted review on purpose; review locally by default
